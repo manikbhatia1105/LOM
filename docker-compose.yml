@@ -1,0 +1,25 @@
+
+version: "3"
+
+services:
+  app:
+    build: .
+    container_name: manipal-ecomm-dev-BED
+    restart: always
+    ports:
+      - "8000:8000"
+    command:
+      "gunicorn --workers=2 --bind=0.0.0.0:8000 --timeout 100 manipal_e_commerce_bed.wsgi:application"
+    volumes:
+      - .:/usr/src/app
+
+  nginx:
+    image: nginx:latest
+    container_name: manipal-ecomm-web-dev
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - app

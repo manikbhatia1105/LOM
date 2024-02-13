@@ -1,0 +1,74 @@
+pipeline {
+    agent {
+        label 'master'
+    }
+
+    stages {
+        
+        stage('Clone sources') {
+            steps {
+                git branch: 'development',
+                    credentialsId: 'f333286a-4784-4a06-9321-344ed75c961d',
+                    url: 'https://github.com/appinessgit/manipal-e-comerce-bed.git/'
+            }
+        }
+
+        stage('SonarQube analysis') {
+ environment {
+        scannerHome = tool 'sonar-scanner'
+        }
+
+            steps {
+                 withSonarQubeEnv('sonarqube') {
+                    echo '${env.SONAR_HOST_URL}'
+            sh '''
+            ${JENKINS_HOME}/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonar-scanner/bin/sonar-scanner \
+            -D sonar.projectKey=manipal-ecomm-bed-dev\
+            -D sonar.projectName=manipal-ecomm-bed-dev \
+            -D sonar.projectVersion=1.0 \
+            -D sonar.sources=/var/lib/jenkins/workspace/$JOB_NAME \
+            '''
+          
+        }
+
+            }
+        }
+        
+        
+        stage("Quality gate") {
+            steps {
+                   timeout(time: 1, unit: 'HOURS') {
+                waitForQualityGate abortPipeline: true
+
+              }
+            }
+        }  
+     
+    }
+    
+    
+    
+    environment {
+        EMAIL_TO = 'adithya@appinessworld.com'
+       
+      
+     }
+            
+    post {
+       failure {
+            emailext body: 'Hi,\n your latest build $BUILD_NUMBER  has failed the sonarqube quality gate \n Please Check console output(jenkins) at \n\n\n $BUILD_URL \n To view the results in sonarqube <b>manipal-ecomm-fed-dev<b> .\n Please check below url & go to project  \n\n\n  http://sonarqube.appinessworld.com:9000/projects \n\n ${CHANGES} \n\n -------------------------------------------------- \n \n Jenkins build Logs \n\n\n\n\n ${BUILD_LOG, maxLines=100, escapeHtml=false}', 
+                    to: "${EMAIL_TO}", 
+                    subject: '[Jenkins-sonarqube] Build - sonarqube status error in Jenkins: $PROJECT_NAME - #$BUILD_NUMBER'
+        }
+        success {
+            emailext body: 'Hi,\n your latest build $BUILD_NUMBER  has Success the sonarqube quality gate \n Please Check console output(jenkins) at \n\n\n $BUILD_URL \n To view the results in sonarqube <b>manipal-ecomm-fed-dev<b> .\n Please check below url & go to project  \n\n\n  http://sonarqube.appinessworld.com:9000/projects \n\n ${CHANGES} \n\n -------------------------------------------------- \n \n Jenkins build Logs \n\n\n\n\n ${BUILD_LOG, maxLines=100, escapeHtml=false}', 
+                    to: "${EMAIL_TO}", 
+                    subject: '[Jenkins-sonarqube] Build - sonarqube was success in Jenkins: $PROJECT_NAME - #$BUILD_NUMBER'
+        }
+        
+        
+     }
+     
+     }
+       
+    
